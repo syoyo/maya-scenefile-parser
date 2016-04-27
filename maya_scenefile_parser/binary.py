@@ -1,74 +1,71 @@
 import os
-import re
-import sys
 import struct
-from functools import wraps
-from contextlib import contextmanager
-from collections import namedtuple
 
-from common import *
-from ..util.iff import *
-from ..util import *
+from . import common, iff
 
 
 # IFF chunk type IDs
-FOR4 = be_word4("FOR4")
-LIS4 = be_word4("LIS4")
+FOR4 = common.be_word4("FOR4")
+LIS4 = common.be_word4("LIS4")
 # 64 bits
-FOR8 = be_word4("FOR8")
-LIS8 = be_word4("LIS8")
+FOR8 = common.be_word4("FOR8")
+LIS8 = common.be_word4("LIS8")
 
 # General
-MAYA = be_word4("Maya")
+MAYA = common.be_word4("Maya")
 
 # File referencing
-FREF = be_word4("FREF")
-FRDI = be_word4("FRDI")
+FREF = common.be_word4("FREF")
+FRDI = common.be_word4("FRDI")
 
 # Header fields
-HEAD = be_word4("HEAD")
-VERS = be_word4("VERS")
-PLUG = be_word4("PLUG")
-FINF = be_word4("FINF")
-AUNI = be_word4("AUNI")
-LUNI = be_word4("LUNI")
-TUNI = be_word4("TUNI")
+HEAD = common.be_word4("HEAD")
+VERS = common.be_word4("VERS")
+PLUG = common.be_word4("PLUG")
+FINF = common.be_word4("FINF")
+AUNI = common.be_word4("AUNI")
+LUNI = common.be_word4("LUNI")
+TUNI = common.be_word4("TUNI")
 
 # Node creation
-CREA = be_word4("CREA")
-SLCT = be_word4("SLCT")
-ATTR = be_word4("ATTR")
+CREA = common.be_word4("CREA")
+SLCT = common.be_word4("SLCT")
+ATTR = common.be_word4("ATTR")
 
-CONS = be_word4("CONS")
-CONN = be_word4("CONN")
+CONS = common.be_word4("CONS")
+CONN = common.be_word4("CONN")
 
 # Data types
-FLGS = be_word4("FLGS")
-DBLE = be_word4("DBLE")
-DBL3 = be_word4("DBL3")
-STR_ = be_word4("STR ")
-FLT2 = be_word4("FLT2")
-CMPD = be_word4("CMPD")
-MESH = be_word4("MESH")
+FLGS = common.be_word4("FLGS")
+DBLE = common.be_word4("DBLE")
+DBL3 = common.be_word4("DBL3")
+STR_ = common.be_word4("STR ")
+FLT2 = common.be_word4("FLT2")
+CMPD = common.be_word4("CMPD")
+MESH = common.be_word4("MESH")
 
 
-MAYA_BINARY_32 = IffFormat(endianness=IFF_BIG_ENDIAN,
-                           typeid_bytes=4,
-                           size_bytes=4,
-                           header_alignment=4,
-                           chunk_alignment=4)
-MAYA_BINARY_64 = IffFormat(endianness=IFF_BIG_ENDIAN,
-                           typeid_bytes=4,
-                           size_bytes=8,
-                           header_alignment=8,
-                           chunk_alignment=8)
+MAYA_BINARY_32 = iff.IffFormat(
+    endianness=iff.IFF_BIG_ENDIAN,
+    typeid_bytes=4,
+    size_bytes=4,
+    header_alignment=4,
+    chunk_alignment=4
+)
+MAYA_BINARY_64 = iff.IffFormat(
+    endianness=iff.IFF_BIG_ENDIAN,
+    typeid_bytes=4,
+    size_bytes=8,
+    header_alignment=8,
+    chunk_alignment=8
+)
 
 
 class MayaBinaryError(RuntimeError):
     pass
 
 
-class MayaBinaryParser(IffParser, MayaParserBase):
+class MayaBinaryParser(iff.IffParser, common.MayaParserBase):
     def __init__(self, stream):
         # Determine Maya format based on magic number
         # Maya 2014+ files begin with a FOR8 block, indicating a 64-bit format.
@@ -79,10 +76,10 @@ class MayaBinaryParser(IffParser, MayaParserBase):
         elif magic_number == "FOR8":
             format = MAYA_BINARY_64
         else:
-            raise MayaBinaryError, "Bad magic number"
+            raise MayaBinaryError("Bad magic number")
 
-        IffParser.__init__(self, stream, format=format)
-        MayaParserBase.__init__(self)
+        iff.IffParser.__init__(self, stream, format=format)
+        common.MayaParserBase.__init__(self)
 
         maya64 = format == MAYA_BINARY_64
         self.__maya64 = maya64
@@ -115,7 +112,7 @@ class MayaBinaryParser(IffParser, MayaParserBase):
 
     def _read_mtypeid(self):
         # 64-bit format still uses 32-bit MTypeIds
-        result = be_read4(self.stream)
+        result = common.be_read4(self.stream)
         self._realign()
         return result
 
@@ -131,14 +128,14 @@ class MayaBinaryParser(IffParser, MayaParserBase):
             
             # requires (plugin)
             elif chunk.typeid == PLUG:
-                plugin = read_null_terminated(self.stream)
-                version = read_null_terminated(self.stream)
+                plugin = common.read_null_terminated(self.stream)
+                version = common.read_null_terminated(self.stream)
                 self.on_requires_plugin(plugin, version)
 
             # fileInfo
             elif chunk.typeid == FINF:
-                key = read_null_terminated(self.stream)
-                value = read_null_terminated(self.stream)
+                key = common.read_null_terminated(self.stream)
+                value = common.read_null_terminated(self.stream)
                 self.on_file_info(key, value)
 
             # on_current_unit callback is deferred until all three 
@@ -173,12 +170,12 @@ class MayaBinaryParser(IffParser, MayaParserBase):
 
     def _parse_file_reference(self):
         for chunk in self._iter_chunks(types=[FREF]):
-            self.on_file_reference(read_null_terminated(self.stream))
+            self.on_file_reference(common.read_null_terminated(self.stream))
 
     def _parse_connection(self):
         self.stream.read(17 if self.__maya64 else 9)
-        src = read_null_terminated(self.stream)
-        dst = read_null_terminated(self.stream)
+        src = common.read_null_terminated(self.stream)
+        dst = common.read_null_terminated(self.stream)
         self.on_connect_attr(src, dst)
 
     def _parse_node(self, mtypeid):
@@ -219,14 +216,14 @@ class MayaBinaryParser(IffParser, MayaParserBase):
             self._parse_mpxdata_attribute(mtypeid)
 
     def _parse_attribute_info(self):
-        attr_name = read_null_terminated(self.stream)
-        mystery_flag = self.stream.read(1)
-        count = plug_element_count(attr_name)
+        attr_name = common.read_null_terminated(self.stream)
+        self.stream.read(1)  # mystery flag
+        count = common.plug_element_count(attr_name)
         return attr_name, count
 
     def _parse_string_attribute(self):
         attr_name, count = self._parse_attribute_info()
-        value = read_null_terminated(self.stream)
+        value = common.read_null_terminated(self.stream)
         self.on_set_attr(attr_name, value, type="string")
 
     def _parse_double_attribute(self):
@@ -250,7 +247,7 @@ class MayaBinaryParser(IffParser, MayaParserBase):
         with open(path) as f:
             line = f.readline()
             while line:
-                mtypeid = be_word4(line[:4])
+                mtypeid = common.be_word4(line[:4])
                 typename = line[5:].strip()
                 self.__mtypeid_to_typename[mtypeid] = typename
                 line = f.readline()

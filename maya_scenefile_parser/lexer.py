@@ -40,6 +40,7 @@ class SimpleLexer(object):
         self.__regex = re.compile("")
         self.__update_regex()
         self.__pos = 0
+        self.__advance_line_mmapped = None
 
         if mmapped and hasattr(self.__stream, "fileno"):
             self.__input = mmap.mmap(self.__stream.fileno(), 0, prot=mmap.PROT_READ)
@@ -61,15 +62,15 @@ class SimpleLexer(object):
 
         match = self.__regex.match(self.__input, self.__pos)
         if match is None:
-            raise LexerError, "Input stream contains unexpected characters."
+            raise LexerError("Input stream contains unexpected characters.")
 
         value = match.group()
         if not value:
-            raise LexerError, "Grammar matched an empty string."
+            raise LexerError("Grammar matched an empty string.")
 
         rule = self.__rule_dict.get(match.lastgroup)
         if rule is None:
-            raise LexerError, "Input stream matched an unknown rule."
+            raise LexerError("Input stream matched an unknown rule.")
 
         start, end = match.span()
 

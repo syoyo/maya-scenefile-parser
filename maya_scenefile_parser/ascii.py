@@ -1,11 +1,13 @@
-from common import *
+import json
+
+from . import common
 
 
 class MayaAsciiError(ValueError):
     pass
 
 
-class MayaAsciiParserBase(MayaParserBase):
+class MayaAsciiParserBase(common.MayaParserBase):
     def __init__(self):
         self.__command_handlers = {
             "requires": self._exec_requires,
@@ -75,7 +77,6 @@ class MayaAsciiParserBase(MayaParserBase):
 
         name = None
         parent = None
-        shared = False
 
         argptr = 1
         while argptr < len(args):
@@ -87,16 +88,50 @@ class MayaAsciiParserBase(MayaParserBase):
                 parent = args[argptr + 1]
                 argptr += 2
             elif arg in ("-s", "--shared"):
-                shared = True
                 argptr += 1
             else:
-                raise MayaAsciiError, "Unexpected argument: %s" % arg
+                raise MayaAsciiError("Unexpected argument: %s" % arg)
 
         self.on_create_node(nodetype, name, parent)
 
     def _exec_set_attr(self, args):
-        pass
+        name = args.pop(0)[1:]
+        attrtype = None
+        value = None
 
+        argptr = 1
+        while argptr < len(args):
+            arg = args[argptr]
+            if arg in ("-type", "--type"):
+                attrtype = args[argptr + 1]
+                value = args[argptr + 2:]
+                argptr += 2
+            else:
+                # FIXME this is a catch-all; explicitly support flags
+                argptr += 1
+
+        if not value:
+            value = args[-1]
+
+        if not attrtype:
+            # Implicitly convert between Python types
+            # FIXME this isn't particularly safe?
+            types = {
+                str: "string",
+                float: "double",
+                int: "integer"
+            }
+
+            try:
+                attrtype = types[type(json.loads(value))]
+
+            except KeyError:
+                attrtype = "string"
+
+            except ValueError:
+                attrtype = types.get(type(value), "string")
+
+        self.on_set_attr(name, value, attrtype)
 
 class MayaAsciiParser(MayaAsciiParserBase):
 
@@ -190,3 +225,4 @@ class MayaAsciiParser(MayaAsciiParserBase):
 
             # Done tokenizing arguments, call command handler
             self.exec_command(command, args)
+

@@ -25,13 +25,13 @@ def _get_header_struct(format):
     byte_formats = {1: "B", 2: "H", 4: "L", 8: "Q"}
 
     if format.endianness not in endian_formats:
-        raise ValueError, "Iff: Invalid endianness"
+        raise ValueError("Iff: Invalid endianness")
 
     if format.typeid_bytes not in byte_formats:
-        raise ValueError, "Iff: Invalid typeid format"
+        raise ValueError("Iff: Invalid typeid format")
 
     if format.size_bytes not in byte_formats:
-        raise ValueError, "Iff: Invalid size format"
+        raise ValueError("Iff: Invalid size format")
 
     typeid_padding = "x" * max(0, format.header_alignment - format.typeid_bytes)
     size_padding = "x" * max(0, format.header_alignment - format.size_bytes)
@@ -100,7 +100,7 @@ class IffParser(object):
             chunk = self._read_next_chunk()
 
     @contextmanager
-    def _using_chunk(self, chunk):
+    def _using_chunk(self, chunk, alignment=None):
         data_end = chunk.data_offset + chunk.data_length
         chunk_end = chunk.data_offset + align(chunk.data_length, self.__format.chunk_alignment)
         try:
