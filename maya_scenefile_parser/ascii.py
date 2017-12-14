@@ -65,6 +65,8 @@ class MayaAsciiParserBase(common.MayaParserBase):
             elif arg in ("-rfn", "--referenceNode"):
                 reference_node = args[argptr + 1]
                 argptr += 2
+            elif arg in ('-op'):
+                argptr += 2
             else:
                 break
 
