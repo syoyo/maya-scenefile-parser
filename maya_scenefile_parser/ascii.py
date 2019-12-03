@@ -101,13 +101,28 @@ class MayaAsciiParserBase(common.MayaParserBase):
         attrtype = None
         value = None
 
-        argptr = 1
+        argptr = 0
         while argptr < len(args):
             arg = args[argptr]
-            if arg in ("-type", "--type"):
+            if "-type" == arg or "--type" == arg:
                 attrtype = args[argptr + 1]
-                value = args[argptr + 2:]
-                argptr += 2
+
+                # handle double3 and matrix
+                if attrtype == "double3":
+                    # TODO: range check
+                    value = [args[argptr+2], args[argptr+3], args[argptr+4]]
+                    argptr += 3 + 1
+                elif attrtype == "matrix":
+
+                    value = []
+                    for m in range(16):
+                        value.append(args[argptr+2+m])
+
+                    argptr += 16 + 1
+                else:
+                    # Assume scalar value
+                    value = args[argptr + 2:]
+                    argptr += 2
             else:
                 # FIXME this is a catch-all; explicitly support flags
                 argptr += 1

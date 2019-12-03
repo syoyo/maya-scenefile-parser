@@ -56,3 +56,29 @@ for node, attrs in nodes.iteritems():
         print("{node}.{key} = {value}".format(**locals()))
 
 ```
+
+## Notes on setAttt
+
+angle is in degree.
+
+### transform
+
+https://knowledge.autodesk.com/ja/support/maya/learn-explore/caas/CloudHelp/cloudhelp/2019/JPN/Maya-Tech-Docs/Nodes/transform-html.html
+
+### joint
+
+https://download.autodesk.com/us/maya/2011help/Commands/joint.html
+
+* `lfw` lockInfluenceWeights(bool)
+* `t` translation(double3)
+* `r` rotation(double3, angle)
+* `mnrl' minRotLimit(double3, angle)
+* `mxrl' maxRotLimit(double3, angle)
+* `jo` jointOrientation(double3, angle)
+* `bps` bindPose(matrix)
+
+### AnimCurve
+
+* `tan` tangentType(enum. default 4)
+* `wgt` weightedTangents(bool. default true)
+* `.ktv[N:M]` key time value(array of (int, double))
